@@ -19,19 +19,18 @@ func BuildServerHelloResponse() []byte {
 	m.WriteOrderedDict(entries)
 	marshalPayload := m.Bytes()
 
-	// 2. MachoNet Header (9 байт!)
-	// [1] MachoNet Version = 0x01 (КРИТИЧНО: был пропущен ранее)
+	// 2. MachoNet Header (10 байт):
+	// [2] MachoNet Version = 0x019E (414) (LittleEndian: 9E 01)
 	// [2] Service ID       = 0x0000 (machoNet)
 	// [2] Method ID        = 0x0001 (Hello)
 	// [4] Call ID          = 0x00000000
-	machoHeader := []byte{
-		0x01,       // MachoNet Version
-		0x00, 0x00, // Service ID
-		0x01, 0x00, // Method ID
-		0x00, 0x00, 0x00, 0x00, // Call ID
-	}
+	machoHeader := make([]byte, 10)
+	binary.LittleEndian.PutUint16(machoHeader[0:2], MachoNetVersion) // MachoNet Version (414)
+	binary.LittleEndian.PutUint16(machoHeader[2:4], 0x0000)           // Service ID
+	binary.LittleEndian.PutUint16(machoHeader[4:6], 0x0001)           // Method ID
+	binary.LittleEndian.PutUint32(machoHeader[6:10], 0x00000000)      // Call ID
 
-	// 3. Собираем: [4 bytes Len LE] + [9 bytes MachoHeader] + [MarshalPayload]
+	// 3. Собираем: [4 bytes Len LE] + [10 bytes MachoHeader] + [MarshalPayload]
 	fullPayload := append(machoHeader, marshalPayload...)
 	pkt := make([]byte, 4+len(fullPayload))
 	binary.LittleEndian.PutUint32(pkt[:4], uint32(len(fullPayload)))
