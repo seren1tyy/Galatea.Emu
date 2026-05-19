@@ -1,11 +1,11 @@
 package server
 
 import (
-	"encoding/hex"
-	"net"
-	"time"
+"encoding/hex"
+"net"
+"time"
 
-	"Galatea.Emu/internal/protocol"
+"Galatea.Emu/internal/protocol"
 )
 
 func (s *Server) handleSession(conn net.Conn) {
@@ -16,35 +16,29 @@ func (s *Server) handleSession(conn net.Conn) {
 		tcpConn.SetNoDelay(true)
 	}
 
-	s.logger.Info("Client connected", "addr", conn.RemoteAddr())
+	s.logger.Printf("Client connected from %s", conn.RemoteAddr())
 
-	// 1. СРАЗУ отправляем machoNet.Hello (клиент ждёт именно этого)
+	// 1. СНАЧАЛА ждём Client Hello от клиента
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	clientPkt, err := protocol.ReadPacket(conn)
+	if err != nil {
+		s.logger.Printf("Failed to receive Client Hello: %v", err)
+		return
+	}
+
+	s.logger.Printf("Received Client Hello: len=%d hex=%s", len(clientPkt.Payload), hex.EncodeToString(clientPkt.Payload))
+
+	// 2. ТОЛЬКО ПОТОМ отправляем Server Hello в ответ
 	response := protocol.BuildServerHelloResponse()
-	s.logger.Info("Sending Server Hello",
-		"len", len(response),
-		"hex", hex.EncodeToString(response),
-	)
+	s.logger.Printf("Sending Server Hello: len=%d hex=%s", len(response), hex.EncodeToString(response))
 
 	n, err := conn.Write(response)
 	if err != nil {
-		s.logger.Error("Failed to send hello", "err", err)
+		s.logger.Printf("Failed to send hello: %v", err)
 		return
 	}
-	s.logger.Info("Server Hello sent", "bytes", n)
-
-	// 2. Ждём ответ клиента (Client Hello)
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	pkt, err := protocol.ReadPacket(conn)
-	if err != nil {
-		s.logger.Warn("Client disconnected or timeout", "err", err)
-		return
-	}
-
-	s.logger.Info("Received Client Hello",
-		"len", len(pkt.Payload),
-		"hex", hex.EncodeToString(pkt.Payload),
-	)
+	s.logger.Printf("Server Hello sent: bytes=%d", n)
 
 	// ✅ Хендшейк пройден. Далее пойдёт svc.Login или auth challenge
-	s.logger.Info("Handshake complete. Ready for authentication.")
+	s.logger.Println("Handshake complete. Ready for authentication.")
 }
