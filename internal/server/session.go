@@ -73,10 +73,10 @@ func (s *Server) handleSession(conn net.Conn) {
 	writeDuration := time.Since(writeStart)
 
 	if err != nil {
-		s.logger.Printf("[SESSION] Failed to send Server Hello after %v: %v", writeDuration, err)
+		s.logger.Printf("[SESSION] ❌ Failed to send Server Hello after %v: %v", writeDuration, err)
 		return
 	}
-	s.logger.Printf("[SESSION] Server Hello sent: %d bytes in %v", n, writeDuration)
+	s.logger.Printf("[SESSION] ✅ Server Hello sent: %d bytes in %v", n, writeDuration)
 
 	// 3. Ждём ответный Client Hello
 	s.logger.Printf("[SESSION] Waiting for Client Hello response (timeout=10s)...")
@@ -87,16 +87,16 @@ func (s *Server) handleSession(conn net.Conn) {
 	readDuration = time.Since(readStart)
 
 	if err != nil {
-		s.logger.Printf("[SESSION] Failed to receive Client Hello after %v: %v", readDuration, err)
+		s.logger.Printf("[SESSION] ❌ Failed to receive Client Hello after %v: %v", readDuration, err)
 		return
 	}
 
-	s.logger.Printf("[SESSION] Received Client Hello after %v", readDuration)
+	s.logger.Printf("[SESSION] ✅ Received Client Hello after %v", readDuration)
 	s.logger.Printf("[PACKET] Client Hello details:")
 	s.logger.Printf("  - Length: %d bytes", len(clientHelloPkt.Payload))
 	s.logger.Printf("  - Hex dump: %s", hex.EncodeToString(clientHelloPkt.Payload))
 
 	// ✅ Хендшейк пройден. Далее пойдёт svc.Login или auth challenge
-	s.logger.Println("[SESSION] Handshake complete. Ready for authentication.")
+	s.logger.Println("[SESSION] 🎉 Handshake complete. Ready for authentication.")
 	s.logger.Printf("[SESSION] Connection %s is now in authenticated state", conn.RemoteAddr())
 }
